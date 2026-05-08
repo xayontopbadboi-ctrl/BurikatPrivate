@@ -1,0 +1,417 @@
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/memejames/elerium-v2-ui-library//main/Library", true))()
+local window = library:AddWindow("Burikat Privates", {
+	main_color = Color3.fromRGB(41, 74, 122), -- Color
+	min_size = Vector2.new(550, 450), -- Size of the gui
+	can_resize = false, -- true or false
+})
+
+local features = window:AddTab("Fast lift💪") -- Name of tab
+
+-- The Tolocal feggle Switch
+local pesaActive = false
+features:AddSwitch("Auto lift", function(bool)
+    pesaActive = bool
+    if pesaActive then
+        task.spawn(function()
+            while pesaActive do
+                game:GetService("ReplicatedStorage").PesaEvent:FireServer()
+                task.wait(0.01) -- Adjust speed here
+            end
+        end)
+    end
+end)
+
+local features = window:AddTab("Fast Rebirths🔄") -- Name of tab
+
+-- Renacer Toggle
+local renacerEnabled = false
+features:AddSwitch("Auto Rebirths", function(state)
+    renacerEnabled = state
+    
+    if renacerEnabled then
+        task.spawn(function()
+            while renacerEnabled do
+                game:GetService("ReplicatedStorage").RenacerRequest:FireServer()
+                task.wait(0.01) -- Delay to prevent kicking for remote spam
+            end
+        end)
+    end
+end)
+
+local Tab = window:AddTab("Combat☠️") -- Name of tab
+
+-- Add the switch to your Tab
+Tab:AddSwitch("Auto Kill", function(Value)
+    _G.Spawnkill = Value
+    if Value then
+        task.spawn(function()
+            local Players = game:GetService("Players")
+            local localPlayer = Players.LocalPlayer
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            
+            while _G.Spawnkill do
+                local character = localPlayer.Character
+                local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+                if character and rootPart and humanoid then
+                    -- Handle Tool Equipping/Activating
+                    local tool = localPlayer.Backpack:FindFirstChildOfClass("Tool") or character:FindFirstChildOfClass("Tool")
+                    if tool then
+                        if tool.Parent ~= character then
+                            humanoid:EquipTool(tool)
+                        end
+                        tool:Activate()
+                    end
+
+                    -- Target and Teleport
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= localPlayer and player.Character then
+                            local tRoot = player.Character:FindFirstChild("HumanoidRootPart")
+                            local tHum = player.Character:FindFirstChild("Humanoid")
+                            
+                            if tRoot and tHum and tHum.Health > 0 then
+                                rootPart.CFrame = tRoot.CFrame * CFrame.new(0, 0, 3)
+                                break -- Focus on one target at a time
+                            end
+                        end
+                    end
+                end
+
+                -- Remote Spam (Size Change)
+                local remotes = ReplicatedStorage:FindFirstChild("RemotesEvent")
+                if remotes and remotes:FindFirstChild("SizeChanged") then
+                    remotes.SizeChanged:FireServer(1)
+                end
+
+                task.wait() -- Small delay to prevent crashing
+            end
+        end)
+    end
+end)
+
+local TargetName = "" 
+local LoopKilling = false
+
+Tab:AddTextBox("Target Player Name", function(text)
+    TargetName = text
+end, {
+    ["placeholder"] = "Enter Username...",
+    ["clear"] = false
+})
+
+Tab:AddSwitch("TP Kill Target", function(state)
+    LoopKilling = state
+    if LoopKilling then
+        task.spawn(function()
+            local localPlayer = game.Players.LocalPlayer
+            while LoopKilling do
+                local target = game.Players:FindFirstChild(TargetName)
+                
+                if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and 
+                   localPlayer.Character and localPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    
+                    -- 1. Teleport behind the target
+                    localPlayer.Character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                    
+                    -- 2. Auto-Equip Logic (If not holding a tool, grab one from backpack)
+                    local tool = localPlayer.Character:FindFirstChildOfClass("Tool")
+                    if not tool then
+                        local backpackTool = localPlayer.Backpack:FindFirstChildOfClass("Tool")
+                        if backpackTool then
+                            localPlayer.Character.Humanoid:EquipTool(backpackTool)
+                            tool = backpackTool
+                        end
+                    end
+                    
+                    -- 3. Auto Attack Logic
+                    if tool then
+                        tool:Activate() -- Swings the sword/uses the tool
+                    end
+                end
+                
+                task.wait(0.01) 
+            end
+        end)
+    end
+end)
+
+local AutoPunchActive = false
+
+Tab:AddSwitch("Auto Punch", function(Value)
+    AutoPunchActive = Value
+    
+    local player = game.Players.LocalPlayer
+    
+    if Value then
+        -- 1. Handling the Auto-Equip & Click Logic
+        task.spawn(function()
+            while AutoPunchActive do
+                local char = player.Character
+                local backpack = player:FindFirstChild("Backpack")
+                local tool = char and char:FindFirstChild("Punch")
+                
+                -- If not holding the tool, try to find it in backpack and equip it
+                if not tool and backpack then
+                    local bpTool = backpack:FindFirstChild("Punch")
+                    if bpTool then
+                        local hum = char and char:FindFirstChildOfClass("Humanoid")
+                        if hum then
+                            hum:EquipTool(bpTool)
+                        end
+                    end
+                end
+                
+                -- If we are now holding the tool, activate it
+                if char and char:FindFirstChild("Punch") then
+                    char.Punch:Activate()
+                end
+                
+                task.wait(0.1) -- Punch speed
+            end
+        end)
+    end
+end)
+
+_G.HeadSize = 20
+_G.HitboxEnabled = false 
+
+-- Elerium V2 Switch
+Tab:AddSwitch("Kill Aura", function(Value)
+    _G.HitboxEnabled = Value
+    
+    -- Reset hitboxes when turned off
+    if not Value then
+        for _, v in pairs(game:GetService('Players'):GetPlayers()) do
+            if v ~= game.Players.LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                v.Character.HumanoidRootPart.Size = Vector3.new(2, 2, 1) -- Standard Roblox HRP size
+                v.Character.HumanoidRootPart.Transparency = 1
+            end
+        end
+    end
+end)
+
+-- Constant loop for the expander
+game:GetService('RunService').RenderStepped:Connect(function()
+    if _G.HitboxEnabled then
+        for _, v in pairs(game:GetService('Players'):GetPlayers()) do
+            if v ~= game.Players.LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                pcall(function()
+                    local hrp = v.Character.HumanoidRootPart
+                    hrp.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                    hrp.Transparency = 0.7 -- Set to 0.7 so you can actually see the expanded hitbox
+                    hrp.BrickColor = BrickColor.new("Really black")
+                    hrp.Material = Enum.Material.Neon
+                    hrp.CanCollide = false
+                end)
+            end
+        end
+    end
+end)
+
+local Tab = window:AddTab("Misc⚙️") -- Name of tab
+
+Tab:AddButton("Load Hand Master R15", function()
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Hand-Master-r15-Anim-Edited-Becoming-Puncher-By-Leorio-208942"))()
+end)
+
+Tab:AddButton("Rejoin Game", function()
+    local TeleportService = game:GetService("TeleportService")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    if #Players:GetPlayers() <= 1 then
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    else
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+    end
+end)
+
+Tab:AddButton("Ultra Anti-Lag", function()
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Ultra-AntiLag-147674"))()
+end)
+
+Tab:AddButton("Load Emotes Script", function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/7yd7/Hub/refs/heads/Branch/GUIS/Emotes.lua"))()
+end)
+
+Tab:AddButton("Jerk Tool (R15)", function()
+    loadstring(game:HttpGet("https://pastefy.app/YZoglOyJ/raw"))()
+end)
+
+local WalkflingEnabled = false
+-- Changed AddToggle to AddSwitch
+Tab:AddSwitch("OP Walkfling", function(Value)
+    WalkflingEnabled = Value
+    task.spawn(function()
+        local lp = game.Players.LocalPlayer
+        while WalkflingEnabled do
+            local char = lp.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            
+            if hrp and hum then
+                hum:SetStateEnabled(Enum.HumanoidStateType.Physics, true)
+                hrp.AssemblyLinearVelocity = Vector3.new(0, 5000, 0)
+                hrp.AssemblyAngularVelocity = Vector3.new(0, 10000, 0)
+            end
+            task.wait(0.05)
+        end
+        
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        end
+    end)
+end)
+
+local ClickTPEnabled = false
+local Mouse = game.Players.LocalPlayer:GetMouse()
+-- Changed AddToggle to AddSwitch
+Tab:AddSwitch("Click Teleport", function(Value)
+    ClickTPEnabled = Value
+end)
+
+Mouse.Button1Down:Connect(function()
+    if ClickTPEnabled then
+        local character = game.Players.LocalPlayer.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if root then
+            root.CFrame = CFrame.new(Mouse.Hit.p + Vector3.new(0, 3, 0))
+        end
+    end
+end)
+
+-- Changed AddToggle to AddSwitch
+Tab:AddSwitch("Toggle Size Change", function(Value)
+    _G.ActiveSize = Value 
+    if Value then
+        task.spawn(function()
+            while _G.ActiveSize do
+                local args = { [1] = 1 }
+                local remote = game:GetService("ReplicatedStorage"):FindFirstChild("RemotesEvent")
+                local sizeRemote = remote and remote:FindFirstChild("SizeChanged")
+                
+                if sizeRemote then
+                    sizeRemote:FireServer(unpack(args))
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+end)
+
+-- Changed AddToggle to AddSwitch
+Tab:AddSwitch("Anti-AFK", function(Value)
+    _G.AntiAFK = Value
+    if Value then
+        _G.AFKConnection = game.Players.LocalPlayer.Idled:Connect(function()
+            if _G.AntiAFK then
+                game:GetService("VirtualUser"):CaptureController()
+                game:GetService("VirtualUser"):ClickButton2(Vector2.new())
+            end
+        end)
+    elseif _G.AFKConnection then
+        _G.AFKConnection:Disconnect()
+        _G.AFKConnection = nil
+    end
+end)
+
+local Tab = window:AddTab("Movement⚡") -- Name of tab
+
+Tab:AddButton("Load Fly GUI V3", function()
+    -- This executes the external Fly GUI script when the button is clicked
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+end)
+
+-- Variables for control
+getgenv().LoopSpeedEnabled = false
+getgenv().WalkSpeedValue = 16
+
+-- 1. The Switch (Toggle)
+Tab:AddSwitch("Loop WalkSpeed", function(bool)
+    getgenv().LoopSpeedEnabled = bool
+    print("Loop Speed is now: ", bool)
+end)
+
+-- 2. The Textbox (Speed Value)
+Tab:AddTextBox("Speed Amount", function(text)
+    local num = tonumber(text)
+    if num then
+        getgenv().WalkSpeedValue = num
+    end
+end)
+
+-- 3. The Background Loop
+task.spawn(function()
+    while task.wait() do
+        if getgenv().LoopSpeedEnabled then
+            pcall(function()
+                local char = game.Players.LocalPlayer.Character
+                if char and char:FindFirstChild("Humanoid") then
+                    char.Humanoid.WalkSpeed = getgenv().WalkSpeedValue
+                end
+            end)
+        end
+    end
+end)
+
+local InfiniteJumpEnabled = false
+
+-- 1. Switch to Enable/Disable
+Tab:AddSwitch("Infinite Jump", function(Value)
+    InfiniteJumpEnabled = Value
+end)
+
+-- 2. The Logic (Listen for Jump Request)
+game:GetService("UserInputService").JumpRequest:Connect(function()
+    if InfiniteJumpEnabled then
+        local player = game.Players.LocalPlayer
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        
+        if humanoid then
+            -- Set state to Jumping to allow another jump in mid-air
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+local LockEnabled = false
+local LockedCFrame = nil
+
+Tab:AddSwitch("Lock Position", function(Value)
+    LockEnabled = Value
+    local char = game.Players.LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+
+    if LockEnabled then
+        if hrp then
+            -- Save current position and anchor
+            LockedCFrame = hrp.CFrame
+            hrp.Anchored = true
+            
+            -- Optional: Loop to ensure you don't drift
+            task.spawn(function()
+                while LockEnabled and hrp do
+                    hrp.CFrame = LockedCFrame
+                    hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                    hrp.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                    task.wait()
+                end
+            end)
+        end
+    else
+        -- Unlock position
+        if hrp then
+            hrp.Anchored = false
+        end
+    end
+end)
+
+local CreditsTab = window:AddTab("Credits") -- Name of tab
+
+CreditsTab:AddLabel("Kyo Private🙊")
+CreditsTab:AddLabel("👑Developer By: Kyo👑")
